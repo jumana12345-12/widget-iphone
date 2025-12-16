@@ -288,6 +288,14 @@
             renderWidget();
         }
 
+        // إلغاء الإجراء (زر التراجع)
+        function handleUndo(event, id) {
+            event.stopPropagation();
+            delete state.confirmedStates[id];
+            console.log("↩️ تم التراجع");
+            renderWidget();
+        }
+
         // تخطي الإجراء (زر التخطي)
         function handleSkip(event, id) {
             event.stopPropagation();
@@ -320,8 +328,10 @@
             // محتوى الويدجت HTML
             let contentHtml = '';
 
-            if (status) {
-                // حالة التأكيد أو التخطي
+            // منطق العرض: إذا كان دواء ومؤكد/متخطي، اعرض شاشة النجاح الكاملة.
+            // إذا كان موعد ومؤكد، اعرض نفس شاشة التفاصيل ولكن مع تغيير النص والزر.
+            if (status && widget.type === 'medications') {
+                // حالة التأكيد أو التخطي (للأدوية فقط)
                 const isSkipped = status === 'skipped';
                 contentHtml = `
                     <div class="h-full flex flex-col items-center justify-center text-center space-y-3 animate-zoom-in font-ibm">
@@ -330,26 +340,42 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-bold text-gray-900 dark:text-white">
-                                ${
-                                    isSkipped 
-                                    ? 'تم تخطي الجرعة' 
-                                    : (widget.type === 'appointments' ? 'تم تأكيد المساندة' : 'تم أخذ الجرعة')
-                                }
+                                ${isSkipped ? 'تم تخطي الجرعة' : 'تم أخذ الجرعة'}
                             </h3>
                             <p class="text-xs text-gray-600 dark:text-gray-300 mt-1 font-medium">
-                                ${
-                                    isSkipped
-                                    ? 'احرص على الالتزام بموعدك القادم 🤍'
-                                    : (widget.type === 'appointments' ? 'وصل والدتك إشعار بقدومك 🤍' : 'صحة وعافية 🤍')
-                                }
+                                ${isSkipped ? 'احرص على الالتزام بموعدك القادم 🤍' : 'صحة وعافية 🤍'}
                             </p>
                         </div>
                     </div>
                 `;
             } else {
-                // الحالة الافتراضية - الأزرار
-                const buttonsHtml = widget.type === 'medications' 
-                    ? `
+                // الحالة الافتراضية (أو حالة الموعد المؤكد)
+                
+                let displayMessage = widget.emotionalMessage;
+                let emotionalMessageColor = 'text-gray-600 dark:text-gray-300 font-semibold';
+                let actionButtons = '';
+
+                // تخصيص المحتوى بناءً على النوع والحالة
+                if (widget.type === 'appointments') {
+                    if (status === 'confirmed') {
+                        // حالة الموعد المؤكد: تغيير النص والزر
+                        displayMessage = 'أنتِ الآن سند لوالدتك، الله يكتب أجرك 🤍';
+                        actionButtons = `
+                        <button onclick="handleUndo(event, ${widget.id})" class="w-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 font-bold py-2.5 px-4 rounded-xl shadow-sm transition-transform active:scale-95 flex items-center justify-center text-sm relative z-20 border border-gray-200 dark:border-gray-600">
+                            تراجع
+                        </button>
+                        `;
+                    } else {
+                        // حالة الموعد الافتراضية
+                        actionButtons = `
+                        <button onclick="handleConfirm(event, ${widget.id}, '${widget.type}')" class="w-full bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition-transform active:scale-95 flex items-center justify-center text-sm relative z-20">
+                            ${widget.cta}
+                        </button>
+                        `;
+                    }
+                } else {
+                    // حالة الأدوية الافتراضية (أزرار التأكيد والتخطي)
+                    actionButtons = `
                     <div class="flex gap-2">
                         <button onclick="handleConfirm(event, ${widget.id}, '${widget.type}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition-transform active:scale-95 flex items-center justify-center text-sm relative z-20">
                             ${widget.cta}
@@ -358,14 +384,8 @@
                             تخطي
                         </button>
                     </div>
-                    `
-                    : `
-                    <button onclick="handleConfirm(event, ${widget.id}, '${widget.type}')" class="w-full bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition-transform active:scale-95 flex items-center justify-center text-sm relative z-20">
-                        ${widget.cta}
-                    </button>
                     `;
-
-                const emotionalMessageColor = 'text-gray-600 dark:text-gray-300 font-semibold';
+                }
 
                 contentHtml = `
                     <div class="h-full flex flex-col justify-between font-ibm relative animate-slide-up">
@@ -396,10 +416,10 @@
                         </div>
 
                         <div class="mt-auto">
-                            <p class="text-[11px] text-center ${emotionalMessageColor} mb-2">
-                                ${widget.emotionalMessage}
+                            <p class="text-[11px] text-center ${emotionalMessageColor} mb-2 transition-all duration-300">
+                                ${displayMessage}
                             </p>
-                            ${buttonsHtml}
+                            ${actionButtons}
                         </div>
                     </div>
                 `;
@@ -416,17 +436,17 @@
             
             // قائمة تطبيقات سعودية مختارة مع ألوان وأيقونات
             const saudiApps = [
-                { name: 'أبشر', icon: 'file-check', color: 'bg-green-600', text: 'text-white' },
-                { name: 'توكلنا', icon: 'shield-check', color: 'bg-teal-800', text: 'text-white' },
-                { name: 'الراجحي', icon: 'landmark', color: 'bg-blue-600', text: 'text-white' },
+                { name: 'أبشر', icon: 'check-circle-2', color: 'bg-green-600', text: 'text-white' },
+                { name: 'توكلنا', icon: 'shield-check', color: 'bg-teal-700', text: 'text-white' },
+                { name: 'نفاذ', icon: 'fingerprint', color: 'bg-green-500', text: 'text-white' },
+                { name: 'الراجحي', icon: 'landmark', color: 'bg-blue-700', text: 'text-white' },
                 { name: 'stc pay', icon: 'wallet', color: 'bg-purple-600', text: 'text-white' },
                 { name: 'نون', icon: 'shopping-bag', color: 'bg-yellow-400', text: 'text-black' },
+                { name: 'جاهز', icon: 'utensils', color: 'bg-red-500', text: 'text-white' },
                 { name: 'حراج', icon: 'tag', color: 'bg-blue-500', text: 'text-white' },
-                { name: 'مرسول', icon: 'chef-hat', color: 'bg-cyan-700', text: 'text-white' },
+                { name: 'سناب', icon: 'ghost', color: 'bg-yellow-300', text: 'text-white shadow-sm' }, 
                 { name: 'واتساب', icon: 'message-circle', color: 'bg-green-500', text: 'text-white' },
-                { name: 'سناب', icon: 'ghost', color: 'bg-yellow-300', text: 'text-black' },
                 { name: 'تويتر', icon: 'twitter', color: 'bg-black', text: 'text-white' },
-                { name: 'مدى', icon: 'credit-card', color: 'bg-gray-600', text: 'text-white' },
             ];
 
             let html = '';
@@ -434,11 +454,11 @@
             for(let i = 0; i < saudiApps.length; i++) {
                 const app = saudiApps[i];
                 html += `
-                    <div class="flex flex-col items-center space-y-1.5">
-                        <div class="w-[60px] h-[60px] ${app.color} backdrop-blur-md rounded-[14px] shadow-sm flex items-center justify-center">
+                    <div class="flex flex-col items-center space-y-1.5 animate-fade-in" style="animation-delay: ${i * 50}ms">
+                        <div class="w-[60px] h-[60px] ${app.color} backdrop-blur-md rounded-[14px] shadow-sm flex items-center justify-center transition-transform hover:scale-105 cursor-pointer">
                              <i data-lucide="${app.icon}" class="w-8 h-8 ${app.text}"></i>
                         </div>
-                        <span class="text-[11px] text-gray-700 dark:text-gray-800 font-medium drop-shadow-md transition-colors">${app.name}</span>
+                        <span class="text-[11px] text-gray-700 dark:text-gray-200 font-medium drop-shadow-sm transition-colors text-center truncate w-[64px]">${app.name}</span>
                     </div>
                 `;
             }
