@@ -93,7 +93,7 @@
             </div>
 
             <!-- المحتوى -->
-            <div class="relative z-10 p-5 pt-14 space-y-6 h-full flex flex-col font-ibm">
+            <div class="relative z-10 px-5 pt-14 pb-2 space-y-6 h-full flex flex-col font-ibm">
                 
                 <!-- شريط الحالة (Status Bar) -->
                 <div class="flex justify-between items-center text-xs text-gray-700 dark:text-gray-800 mb-4 font-semibold px-2 tracking-wide opacity-90 transition-colors">
@@ -106,7 +106,7 @@
                         <div class="w-[22px] h-[11px] relative ml-1">
                             <!-- جسم البطارية (Border) - رمادي/أسود -->
                             <div class="absolute inset-0 border-[1.5px] border-gray-900 dark:border-white rounded-[3px] p-[1.5px] flex items-center justify-start transition-colors">
-                                <!-- نسبة الشحن (Fill) - أسود (عكسنا الأبيض) - يبدأ من اليمين (justify-start في RTL) -->
+                                <!-- نسبة الشحن (Fill) - أسود -->
                                 <div class="w-[60%] h-full bg-gray-900 dark:bg-white rounded-[1px] transition-colors"></div>
                             </div>
                             <!-- رأس البطارية (Nub) - أسود -->
@@ -157,16 +157,27 @@
                 </div>
 
                 <!-- الدوك (Dock) -->
-                <div class="mt-auto mb-2">
-                    <div class="w-full bg-white/40 backdrop-blur-xl rounded-[28px] p-4 flex justify-between items-center px-6">
-                        <div class="w-[55px] h-[55px] bg-gradient-to-b from-gray-200/80 to-white/50 rounded-[14px] shadow-sm"></div>
-                        <div class="w-[55px] h-[55px] bg-gradient-to-b from-gray-200/80 to-white/50 rounded-[14px] shadow-sm"></div>
-                        <div class="w-[55px] h-[55px] bg-gradient-to-b from-gray-200/80 to-white/50 rounded-[14px] shadow-sm"></div>
-                        <div class="w-[55px] h-[55px] bg-gradient-to-b from-gray-200/80 to-white/50 rounded-[14px] shadow-sm"></div>
+                <div class="mt-auto">
+                    <div class="w-full bg-white/40 backdrop-blur-xl rounded-[35px] p-4 flex justify-between items-center px-6 shadow-sm border border-white/10">
+                        <div class="w-[55px] h-[55px] bg-gradient-to-b from-green-400 to-green-600 rounded-[14px] shadow-sm flex items-center justify-center">
+                            <i data-lucide="phone" class="w-7 h-7 text-white"></i>
+                        </div>
+                        <div class="w-[55px] h-[55px] bg-gradient-to-b from-blue-400 to-blue-600 rounded-[14px] shadow-sm flex items-center justify-center">
+                            <i data-lucide="mail" class="w-7 h-7 text-white"></i>
+                        </div>
+                        <div class="w-[55px] h-[55px] bg-gradient-to-b from-gray-200 to-gray-400 rounded-[14px] shadow-sm flex items-center justify-center">
+                            <i data-lucide="globe" class="w-7 h-7 text-gray-700"></i>
+                        </div>
+                        <div class="w-[55px] h-[55px] bg-gradient-to-b from-orange-400 to-orange-600 rounded-[14px] shadow-sm flex items-center justify-center">
+                            <i data-lucide="music" class="w-7 h-7 text-white"></i>
+                        </div>
                     </div>
                 </div>
 
             </div>
+
+            <!-- Home Indicator (مؤشر الصفحة الرئيسية) -->
+            <div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-[130px] h-[5px] bg-gray-800 dark:bg-white rounded-full opacity-30 z-20"></div>
         </div>
 
         <!-- الأزرار الجانبية الفيزيائية -->
@@ -183,9 +194,10 @@
             {
                 type: 'appointments',
                 id: 1,
+                // تم إعادة الرسالة إلى جملة سارة (العبارة العاطفية)
                 emotionalMessage: 'سارة، والدتك تحتاجك تكوني لها سند 🤍',
                 title: 'موعد الوالدة: عيادة القلب',
-                description: 'موعد والدتك اليوم مع د. هدى العلي',
+                description: 'موعد والدتك غداً مع د. هدى العلي',
                 subDetail: 'مستشفى الملك فيصل التخصصي',
                 subDetailIcon: 'map-pin',
                 cta: 'أنا لها (مساندة)',
@@ -212,7 +224,7 @@
         let state = {
             darkMode: false,
             activeIndex: 0,
-            confirmedStates: {} // { 1: true, 2: false }
+            confirmedStates: {} // Stores 'confirmed' or 'skipped' status by ID
         };
 
         // تهيئة التطبيق عند التحميل
@@ -265,14 +277,22 @@
 
         // تأكيد الإجراء (زر التفاعل)
         function handleConfirm(event, id, type) {
-            event.stopPropagation(); // منع التنقل عند الضغط على الزر
-            state.confirmedStates[id] = true;
+            event.stopPropagation();
+            state.confirmedStates[id] = 'confirmed';
             
             if (type === 'appointments') {
                 console.log("📢 إشعار: تم تأكيد المساندة");
             } else {
                 console.log("💊 تم أخذ الدواء");
             }
+            renderWidget();
+        }
+
+        // تخطي الإجراء (زر التخطي)
+        function handleSkip(event, id) {
+            event.stopPropagation();
+            state.confirmedStates[id] = 'skipped';
+            console.log("🚫 تم تخطي الجرعة");
             renderWidget();
         }
 
@@ -283,7 +303,7 @@
             const label = document.getElementById('widget-label');
             
             const widget = widgetsData[state.activeIndex];
-            const isConfirmed = state.confirmedStates[widget.id];
+            const status = state.confirmedStates[widget.id]; // 'confirmed', 'skipped', or undefined
 
             // تحديث التسمية
             label.textContent = widget.type === 'appointments' ? 'صحتنا (المواعيد)' : 'صحتنا (الأدوية)';
@@ -300,25 +320,53 @@
             // محتوى الويدجت HTML
             let contentHtml = '';
 
-            if (isConfirmed) {
-                // حالة التأكيد
+            if (status) {
+                // حالة التأكيد أو التخطي
+                const isSkipped = status === 'skipped';
                 contentHtml = `
                     <div class="h-full flex flex-col items-center justify-center text-center space-y-3 animate-zoom-in font-ibm">
-                        <div class="bg-emerald-100 dark:bg-emerald-800/50 p-3 rounded-full">
-                            <i data-lucide="check" class="w-8 h-8 text-emerald-600 dark:text-emerald-400"></i>
+                        <div class="${isSkipped ? 'bg-red-100 dark:bg-red-900/50' : 'bg-emerald-100 dark:bg-emerald-800/50'} p-3 rounded-full">
+                            <i data-lucide="${isSkipped ? 'alert-circle' : 'check'}" class="w-8 h-8 ${isSkipped ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}"></i>
                         </div>
                         <div>
                             <h3 class="text-lg font-bold text-gray-900 dark:text-white">
-                                ${widget.type === 'appointments' ? 'تم تأكيد المساندة' : 'تم أخذ الجرعة'}
+                                ${
+                                    isSkipped 
+                                    ? 'تم تخطي الجرعة' 
+                                    : (widget.type === 'appointments' ? 'تم تأكيد المساندة' : 'تم أخذ الجرعة')
+                                }
                             </h3>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                ${widget.type === 'appointments' ? 'وصل والدتك إشعار بقدومك 🤍' : 'صحة وعافية 🤍'}
+                            <p class="text-xs text-gray-600 dark:text-gray-300 mt-1 font-medium">
+                                ${
+                                    isSkipped
+                                    ? 'احرص على الالتزام بموعدك القادم 🤍'
+                                    : (widget.type === 'appointments' ? 'وصل والدتك إشعار بقدومك 🤍' : 'صحة وعافية 🤍')
+                                }
                             </p>
                         </div>
                     </div>
                 `;
             } else {
-                // الحالة الافتراضية
+                // الحالة الافتراضية - الأزرار
+                const buttonsHtml = widget.type === 'medications' 
+                    ? `
+                    <div class="flex gap-2">
+                        <button onclick="handleConfirm(event, ${widget.id}, '${widget.type}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition-transform active:scale-95 flex items-center justify-center text-sm relative z-20">
+                            ${widget.cta}
+                        </button>
+                        <button onclick="handleSkip(event, ${widget.id})" class="flex-none w-[30%] bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-800 dark:text-red-100 font-bold py-2.5 px-2 rounded-xl shadow-sm transition-transform active:scale-95 flex items-center justify-center text-sm relative z-20 border border-red-200 dark:border-red-800">
+                            تخطي
+                        </button>
+                    </div>
+                    `
+                    : `
+                    <button onclick="handleConfirm(event, ${widget.id}, '${widget.type}')" class="w-full bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition-transform active:scale-95 flex items-center justify-center text-sm relative z-20">
+                        ${widget.cta}
+                    </button>
+                    `;
+
+                const emotionalMessageColor = 'text-gray-600 dark:text-gray-300 font-semibold';
+
                 contentHtml = `
                     <div class="h-full flex flex-col justify-between font-ibm relative animate-slide-up">
                         <div>
@@ -327,33 +375,31 @@
                                     <div class="bg-emerald-100 dark:bg-emerald-900/40 p-1.5 rounded-lg">
                                         <i data-lucide="${widget.icon}" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
                                     </div>
-                                    <h2 class="text-base font-bold text-gray-900 dark:text-white leading-tight">
+                                    <h2 class="text-base font-extrabold text-gray-900 dark:text-white leading-tight">
                                         ${widget.title}
                                     </h2>
                                 </div>
-                                <span class="text-emerald-700 dark:text-emerald-300 font-ibm text-sm font-bold tracking-widest">
+                                <span class="text-emerald-700 dark:text-emerald-400 font-ibm text-sm font-bold tracking-widest">
                                     ${widget.timeDisplay}
                                 </span>
                             </div>
 
-                            <div class="mr-8">
-                                <p class="text-xs text-gray-500 dark:text-gray-300 leading-snug mb-1 font-medium">
+                            <div class="mr-8 space-y-1">
+                                <p class="text-sm text-gray-800 dark:text-gray-100 leading-snug font-bold">
                                     ${widget.description}
                                 </p>
-                                <div class="flex items-center text-[10px] text-gray-400 dark:text-gray-400">
-                                    <i data-lucide="${widget.subDetailIcon}" class="w-3 h-3 ml-1"></i>
+                                <div class="flex items-center text-xs text-gray-600 dark:text-gray-300 font-semibold">
+                                    <i data-lucide="${widget.subDetailIcon}" class="w-3.5 h-3.5 ml-1 text-gray-500 dark:text-gray-400"></i>
                                     ${widget.subDetail}
                                 </div>
                             </div>
                         </div>
 
                         <div class="mt-auto">
-                            <p class="text-[10px] text-center text-gray-500 dark:text-gray-400 mb-1.5 font-medium">
+                            <p class="text-[11px] text-center ${emotionalMessageColor} mb-2">
                                 ${widget.emotionalMessage}
                             </p>
-                            <button onclick="handleConfirm(event, ${widget.id}, '${widget.type}')" class="w-full bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md transition-transform active:scale-95 flex items-center justify-center text-sm relative z-20">
-                                ${widget.cta}
-                            </button>
+                            ${buttonsHtml}
                         </div>
                     </div>
                 `;
@@ -364,19 +410,41 @@
             lucide.createIcons();
         }
 
-        // توليد شبكة التطبيقات الوهمية
+        // توليد شبكة التطبيقات (تطبيقات سعودية)
         function renderAppGrid() {
             const grid = document.getElementById('app-grid');
+            
+            // قائمة تطبيقات سعودية مختارة مع ألوان وأيقونات
+            const saudiApps = [
+                { name: 'أبشر', icon: 'file-check', color: 'bg-green-600', text: 'text-white' },
+                { name: 'توكلنا', icon: 'shield-check', color: 'bg-teal-800', text: 'text-white' },
+                { name: 'الراجحي', icon: 'landmark', color: 'bg-blue-600', text: 'text-white' },
+                { name: 'stc pay', icon: 'wallet', color: 'bg-purple-600', text: 'text-white' },
+                { name: 'نون', icon: 'shopping-bag', color: 'bg-yellow-400', text: 'text-black' },
+                { name: 'حراج', icon: 'tag', color: 'bg-blue-500', text: 'text-white' },
+                { name: 'مرسول', icon: 'chef-hat', color: 'bg-cyan-700', text: 'text-white' },
+                { name: 'واتساب', icon: 'message-circle', color: 'bg-green-500', text: 'text-white' },
+                { name: 'سناب', icon: 'ghost', color: 'bg-yellow-300', text: 'text-black' },
+                { name: 'تويتر', icon: 'twitter', color: 'bg-black', text: 'text-white' },
+                { name: 'مدى', icon: 'credit-card', color: 'bg-gray-600', text: 'text-white' },
+            ];
+
             let html = '';
-            for(let i = 0; i < 7; i++) {
+            // إنشاء 3 صفوف (11 تطبيق + صحتنا = 12 تطبيق)
+            for(let i = 0; i < saudiApps.length; i++) {
+                const app = saudiApps[i];
                 html += `
                     <div class="flex flex-col items-center space-y-1.5">
-                        <div class="w-[60px] h-[60px] bg-white/40 backdrop-blur-md rounded-[14px] shadow-sm"></div>
-                        <span class="text-[11px] text-gray-700 dark:text-gray-800 font-medium drop-shadow-md transition-colors">تطبيق</span>
+                        <div class="w-[60px] h-[60px] ${app.color} backdrop-blur-md rounded-[14px] shadow-sm flex items-center justify-center">
+                             <i data-lucide="${app.icon}" class="w-8 h-8 ${app.text}"></i>
+                        </div>
+                        <span class="text-[11px] text-gray-700 dark:text-gray-800 font-medium drop-shadow-md transition-colors">${app.name}</span>
                     </div>
                 `;
             }
             grid.innerHTML = html;
+            // إعادة تهيئة الأيقونات للتطبيقات الجديدة
+            lucide.createIcons();
         }
 
     </script>
